@@ -46,11 +46,6 @@
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <service
-            android:name=".ServiceRestarter"
-            android:enabled="true"
-            android:exported="false" />
-
         <receiver
             android:name=".ServiceRestarter"
             android:enabled="true"
