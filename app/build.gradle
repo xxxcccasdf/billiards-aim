@@ -4,15 +4,14 @@ plugins {
 
 android {
     namespace 'com.billiards.aim'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "com.billiards.aim"
         minSdk 24
-        targetSdk 34
-        versionCode 11
+        targetSdk 35
+        versionCode 14
         versionName "1.0.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -30,8 +29,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     buildFeatures {
@@ -46,9 +45,7 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.webkit:webkit:1.11.0'
-    implementation 'androidx.core:core:1.13.1'
-    implementation 'androidx.lifecycle:lifecycle-service:2.8.3'
 }

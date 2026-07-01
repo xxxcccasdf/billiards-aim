@@ -1,15 +1,5 @@
 <resources>
-    <style name="Theme.BilliardsAim" parent="Theme.AppCompat.Light.DarkActionBar">
-        <item name="colorPrimary">#f0c040</item>
-        <item name="colorPrimaryDark">#1a1a2e</item>
-        <item name="colorAccent">#f0c040</item>
-        <item name="android:statusBarColor">#1a1a2e</item>
-        <item name="android:navigationBarColor">#1a1a2e</item>
-        <item name="android:windowBackground">#1a1a2e</item>
-    </style>
-
-    <style name="Theme.BilliardsAim.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="Theme.BilliardsAim" parent="android:Theme.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>
