@@ -1,3 +1,7 @@
+#!/bin/bash
+cd ~/billiards-aim
+
+cat > app/src/main/java/com/billiards/aim/FloatingWindowService.java << 'ENDOFFILE'
 package com.billiards.aim;
 
 import android.app.Notification;
@@ -114,6 +118,7 @@ public class FloatingWindowService extends Service {
             }
         }
     }
+
     private Notification createNotification() {
         Intent stopIntent = new Intent(this, FloatingWindowService.class);
         stopIntent.setAction("ACTION_STOP_SERVICE");
@@ -144,106 +149,29 @@ public class FloatingWindowService extends Service {
         btnSettings = floatingView.findViewById(R.id.btn_settings);
         opacitySeekBar = floatingView.findViewById(R.id.opacity_seekbar);
         if (webView == null || controlPanel == null) throw new IllegalStateException("Required views not found");
-        setupWebView();
-        setupButtons();
-        setupOpacityControl();
-
+        setupWebView(); setupButtons(); setupOpacityControl();
         int layoutType = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            : WindowManager.LayoutParams.TYPE_PHONE;
-
-        params = new WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
-            PixelFormat.TRANSLUCENT
-        );
-
-        params.gravity = Gravity.TOP | Gravity.START;
-        params.x = prefs.getInt("last_x", dpToPx(16));
-        params.y = prefs.getInt("last_y", dpToPx(100));
-        int savedWidth = prefs.getInt("last_w", dpToPx(320));
-        int savedHeight = prefs.getInt("last_h", dpToPx(420));
-        if (savedWidth > dpToPx(MIN_WIDTH_DP)) params.width = savedWidth;
-        if (savedHeight > dpToPx(MIN_HEIGHT_DP)) params.height = savedHeight;
-
-        try {
-            windowManager.addView(floatingView, params);
-        } catch (Exception e) {
-            Log.e(TAG, "addView failed", e);
-            stopSelf();
-            return;
-        }
-
-        setupDragListener();
-        applySavedOpacity();
-        if (prefs.getBoolean("minimized", false)) toggleMinimize();
-    }
-
-    private void setupWebView() {
-        try {
-            WebSettings settings = webView.getSettings();
-            settings.setJavaScriptEnabled(true);
-            settings.setDomStorageEnabled(true);
-            settings.setAllowFileAccess(false);
-            settings.setAllowContentAccess(false);
-            settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
-            settings.setSupportZoom(false);
-            settings.setBuiltInZoomControls(false);
-            settings.setDisplayZoomControls(false);
-
-            webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                    return false;
-                }
-            });
-
-            webView.setWebChromeClient(new WebChromeClient());
-            webView.setBackgroundColor(0x00000000);
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
-        } catch (Exception e) {
-            Log.e(TAG, "setupWebView failed", e);
-        }
-    }
-
+            ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY : WindowManager.LayoutParams.TYPE_PHONE;
+        params = new WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONT
     private void setupButtons() {
         btnClose.setOnClickListener(v -> stopSelf());
         btnMinimize.setOnClickListener(v -> toggleMinimize());
         btnSettings.setOnClickListener(v -> {
-            if (isMinimized) {
-                toggleMinimize();
-                return;
-            }
+            if (isMinimized) { toggleMinimize(); return; }
             controlPanel.setVisibility(controlPanel.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE);
         });
     }
 
     private void setupOpacityControl() {
         opacitySeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 if (!fromUser) return;
-                try {
-                    float alpha = progress / 100f;
-                    webView.setAlpha(alpha);
-                    prefs.edit().putFloat("opacity", alpha).apply();
-                } catch (Exception ignored) {}
+                try { float alpha = progress / 100f; webView.setAlpha(alpha); prefs.edit().putFloat("opacity", alpha).apply(); }
+                catch (Exception ignored) {}
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
     }
 
@@ -256,93 +184,57 @@ public class FloatingWindowService extends Service {
     private void setupDragListener() {
         View dragBar = floatingView.findViewById(R.id.control_bar);
         if (dragBar == null) return;
-
         dragBar.setOnTouchListener((v, event) -> {
             if (isMinimized) return false;
-
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
-                    initialX = params.x;
-                    initialY = params.y;
-                    initialTouchX = event.getRawX();
-                    initialTouchY = event.getRawY();
-                    isDragging = false;
-                    return true;
-
+                    initialX = params.x; initialY = params.y;
+                    initialTouchX = event.getRawX(); initialTouchY = event.getRawY(); isDragging = false; return true;
                 case MotionEvent.ACTION_MOVE:
                     int deltaX = (int) (event.getRawX() - initialTouchX);
                     int deltaY = (int) (event.getRawY() - initialTouchY);
-                    if (!isDragging && (Math.abs(deltaX) > dpToPx(6) || Math.abs(deltaY) > dpToPx(6))) {
-                        isDragging = true;
-                    }
-                    if (isDragging) {
-                        params.x = initialX + deltaX;
-                        params.y = initialY + deltaY;
-                        try {
-                            windowManager.updateViewLayout(floatingView, params);
-                        } catch (Exception ignored) {}
-                    }
+                    if (!isDragging && (Math.abs(deltaX) > dpToPx(6) || Math.abs(deltaY) > dpToPx(6))) isDragging = true;
+                    if (isDragging) { params.x = initialX + deltaX; params.y = initialY + deltaY;
+                        try { windowManager.updateViewLayout(floatingView, params); } catch (Exception ignored) {} }
                     return true;
-
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                    if (isDragging) {
-                        prefs.edit().putInt("last_x", params.x).putInt("last_y", params.y).apply();
-                    }
-                    isDragging = false;
-                    return true;
-            }
-            return false;
+                case MotionEvent.ACTION_UP: case MotionEvent.ACTION_CANCEL:
+                    if (isDragging) prefs.edit().putInt("last_x", params.x).putInt("last_y", params.y).apply();
+                    isDragging = false; return true;
+            } return false;
         });
     }
 
     private void toggleMinimize() {
         if (isMinimized) {
-            webView.setVisibility(View.VISIBLE);
-            controlPanel.setVisibility(View.VISIBLE);
+            webView.setVisibility(View.VISIBLE); controlPanel.setVisibility(View.VISIBLE);
             int savedWidth = prefs.getInt("last_w", dpToPx(320));
             int savedHeight = prefs.getInt("last_h", dpToPx(420));
             params.width = Math.max(dpToPx(MIN_WIDTH_DP), savedWidth);
             params.height = Math.max(dpToPx(MIN_HEIGHT_DP), savedHeight);
-            btnMinimize.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-            isMinimized = false;
+            btnMinimize.setImageResource(android.R.drawable.ic_menu_close_clear_cancel); isMinimized = false;
         } else {
-            webView.setVisibility(View.GONE);
-            controlPanel.setVisibility(View.GONE);
-            params.width = dpToPx(MINIMIZED_SIZE_DP);
-            params.height = dpToPx(MINIMIZED_SIZE_DP);
-            btnMinimize.setImageResource(android.R.drawable.ic_menu_add);
-            isMinimized = true;
+            webView.setVisibility(View.GONE); controlPanel.setVisibility(View.GONE);
+            params.width = dpToPx(MINIMIZED_SIZE_DP); params.height = dpToPx(MINIMIZED_SIZE_DP);
+            btnMinimize.setImageResource(android.R.drawable.ic_menu_add); isMinimized = true;
         }
-        try {
-            windowManager.updateViewLayout(floatingView, params);
-        } catch (Exception ignored) {}
+        try { windowManager.updateViewLayout(floatingView, params); } catch (Exception ignored) {}
         prefs.edit().putBoolean("minimized", isMinimized).apply();
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        isRunning = false;
+    @Override public void onDestroy() {
+        super.onDestroy(); isRunning = false;
         if (floatingView != null && windowManager != null) {
-            try {
-                windowManager.removeView(floatingView);
-            } catch (Exception e) {
-                Log.w(TAG, "removeView failed", e);
-            }
+            try { windowManager.removeView(floatingView); } catch (Exception e) { Log.w(TAG, "removeView failed", e); }
         }
-        if (webView != null) {
-            webView.destroy();
-        }
+        if (webView != null) webView.destroy();
     }
 
-    @Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    private int dpToPx(int dp) {
-        return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
-    }
+    @Nullable @Override public IBinder onBind(Intent intent) { return null; }
+    private int dpToPx(int dp) { return (int) (dp * getResources().getDisplayMetrics().density + 0.5f); }
 }
+ENDOFFILE
+
+git add app/src/main/java/com/billiards/aim/FloatingWindowService.java
+git commit -m "fix: Android 16 compatibility - enhance startForeground"
+git push origin main
+echo "=== 修复完成，已推送到 GitHub ==="
