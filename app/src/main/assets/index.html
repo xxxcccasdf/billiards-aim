@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>台球瞄准辅助</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+#canvas {
+  display: block;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 1;
+}
+/* 控制面板 */
+.panel {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 10;
+  background: rgba(15, 15, 25, 0.92);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 16px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.panel.collapsed { transform: translateY(calc(100% - 36px)); }
+.panel-handle {
+  width: 40px; height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 auto 10px;
+  cursor: pointer;
+}
+/* 反弹库数按钮 */
+.rail-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.rail-btn {
+  flex: 1;
+  padding: 10px 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  font-family: inherit;
+  line-height: 1.3;
+}
+.rail-btn small {
+  display: block;
+  font-weight: 400;
+  opacity: 0.6;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.rail-btn.active {
+  background: #f0c040;
+  border-color: #f0c040;
+  color: #111;
+}
+/* 透明度滑块 */
+.opacity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.opacity-row label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+  font-weight: 500;
+  min-width: 50px;
+}
+.opacity-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.15);
+  outline: none;
+}
+.opacity-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid rgba(255,255,255,0.3);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.opacity-val {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
+}
+/* 底部按钮行 */
+.bottom-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-icon:hover, .btn-icon.active {
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+}
+.btn-reset {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.6);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.btn-reset:hover {
+  border-color: rgba(239,68,68,0.5);
+  color: #ef4444;
+}
+/* 高级设置面板 */
+.advanced-panel {
+  display: none;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 12px;
+}
+.advanced-panel.open { display: block; }
+.adv-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+.adv-item + .adv-item { border-top: 1px solid rgba(255,255,255,0.04); }
+.adv-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+}
+/* 开关 */
+.toggle {
+  position: relative;
+  width: 44px; height: 24px;
+  flex-shrink: 0;
+}
+.toggle input { display: none; }
+.toggle-track {
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #888;
+  transition: all 0.2s;
+}
+.toggle input:checked + .toggle-track { background: #f0c040; }
+.toggle input:checked + .toggle-track::after { left: 22px; background: #fff; }
+/* 球袋选择 */
+.pocket-select {
+  margin-top: 8px;
+}
+.pocket-select-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 8px;
+}
+.pocket-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pocket-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+}
+.pocket-btn::after {
+  content: '+';
+  font-size: 14px;
+  color: rgba(255,255,255,0.3);
+}
+.pocket-btn.selected {
+  border-color: #ef4444;
+}
+.pocket-btn.selected::after {
+  color: #ef4444;
+}
+.pocket-btn.auto {
+  border-color: #f0c040;
+}
+.pocket-btn.auto::after {
+  color: #f0c040;
+}
+/* 帮助遮罩 */
+.help-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: opacity 0.3s, visibility 0.3s;
+}
+.help-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.help-card {
+  background: rgba(20, 20, 30, 0.95);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 320px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.help-card h2 {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.help-card .subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 24px;
+}
+.help-steps {
+  text-align: left;
+  margin-bottom: 24px;
+}
+.help-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.5;
+}
+.help-step:last-child { margin-bottom: 0; }
+.help-step .dot {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111;
+}
+.help-step .dot.white { background: #fff; }
+.help-step .dot.yellow { background: #f0c040; }
+.help-step .dot.pocket {
+  background: transparent;
+  border: 2px solid #ef4444;
+  color: #ef4444;
+}
+.help-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #f0c040;
+  color: #111;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+.help-btn:hover { background: #f8d060; }
+.help-btn:active { transform: scale(0.98); }
+
+@media (min-width: 768px) {
+  .panel {
+    max-width: 500px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 16px 16px 0 0;
+  }
+  .panel.collapsed {
+    transform: translateX(-50%) translateY(calc(100% - 36px));
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- 帮助遮罩 -->
+<div class="help-overlay" id="helpOverlay">
+  <div class="help-card">
+    <h2>台球瞄准辅助</h2>
+    <p class="subtitle">手动瞄准 · 路线计算 · 多库反弹</p>
+    <div class="help-steps">
+      <div class="help-step">
+        <span class="dot white">⚪</span>
+        <span>拖动<strong>白球</strong>设置母球位置</span>
+      </div>
+      <div class="help-step">
+        <span class="dot yellow">🟡</span>
+        <span>拖动<strong>黄球</strong>设置目标球位置</span>
+      </div>
+      <div class="help-step">
+        <span class="dot pocket">+</span>
+        <span>拖动<strong>球袋</strong>调整目标袋口</span>
+      </div>
+      <div class="help-step">
+        <span style="font-size:18px;">👆</span>
+        <span>双击画面 显示/隐藏 控制面板</span>
+      </div>
+    </div>
+    <button class="help-btn" id="helpBtn">开始使用</button>
+  </div>
+</div>
+
+<!-- 底部控制面板 -->
+<div class="panel" id="panel">
+  <div class="panel-handle" id="panelHandle"></div>
+
+  <div class="rail-row" id="railRow">
+    <button class="rail-btn active" data-rails="0">0 库<small>直接进球</small></button>
+    <button class="rail-btn" data-rails="1">1 库<small>一库反弹</small></button>
+    <button class="rail-btn" data-rails="2">2 库<small>两库反弹</small></button>
+    <button class="rail-btn" data-rails="3">3 库<small>三库反弹</small></button>
+  </div>
+
+  <div class="opacity-row">
+    <label>透明度</label>
+    <input type="range" id="opacitySlider" min="10" max="100" value="50" />
+    <span class="opacity-val" id="opacityVal">50%</span>
+  </div>
+
+  <div class="bottom-row">
+    <button class="btn-icon" id="btnSettings" title="高级设置">⚙</button>
+    <button class="btn-reset" id="btnReset">↺ 重置位置</button>
+    <button class="btn-icon" id="btnHelp" title="帮助">?</button>
+  </div>
+
+  <div class="advanced-panel" id="advancedPanel">
+    <div class="adv-item">
+      <span class="adv-label">显示瞄准点</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggleAim" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="adv-item">
+      <span class="adv-label">显示进球路线</span>
+      <label class="toggle">
+        <input type="checkbox" id="togglePocket" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="adv-item">
+      <span class="adv-label">显示延长辅助线</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggleExtend" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="adv-item">
+      <span class="adv-label">显示分离角</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggleSep" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="adv-item">
+      <span class="adv-label">显示全部球袋</span>
+      <label class="toggle">
+        <input type="checkbox" id="toggleAllPockets">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="pocket-select">
+      <div class="pocket-select-label">目标球袋（点击切换自动/手动）</div>
+      <div class="pocket-btns" id="pocketBtns">
+        <button class="pocket-btn auto" data-idx="0"></button>
+        <button class="pocket-btn" data-idx="1"></button>
+        <button class="pocket-btn" data-idx="2"></button>
+        <button class="pocket-btn" data-idx="3"></button>
+        <button class="pocket-btn" data-idx="4"></button>
+        <button class="pocket-btn" data-idx="5"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ========== 画布设置 ==========
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  function resize() {
+    DPR = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+
+  // ========== 状态 ==========
+  const state = {
+    cueBall: { x: 0.25, y: 0.5 },
+    objectBall: { x: 0.55, y: 0.5 },
+    pockets: [
+      { x: 0.04, y: 0.06 },
+      { x: 0.50, y: 0.03 },
+      { x: 0.96, y: 0.06 },
+      { x: 0.04, y: 0.94 },
+      { x: 0.50, y: 0.97 },
+      { x: 0.96, y: 0.94 },
+    ],
+    rails: 0,
+    targetPocket: null,
+    autoPocket: true,
+    showAimPoint: true,
+    showPocketLine: true,
+    showExtendLine: true,
+    showSepAngle: true,
+    showAllPockets: false,
+    opacity: 50,
+    dragging: null,
+    dragOffsetX: 0,
+    dragOffsetY: 0,
+    panelCollapsed: false,
+    advancedOpen: false,
+  };
+
+  // ========== 几何计算 ==========
+  function getAimPoint(objBall, pocket, ballRadius) {
+    const dx = pocket.x - objBall.x;
+    const dy = pocket.y - objBall.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 0.0001) return null;
+    const nx = dx / dist;
+    const ny = dy / dist;
+    return { x: objBall.x - nx * ballRadius * 2, y: objBall.y - ny * ballRadius * 2, nx: nx, ny: ny };
+  }
+
+  function calculateBankShot(objBall, pocket, railCount) {
+    if (railCount === 0) {
+      return { valid: true, points: [objBall, pocket], aimPoint: getAimPoint(objBall, pocket, getBallRadius()) };
+    }
+    const sequences = generateRailSequences(railCount);
+    let bestResult = null, bestScore = -Infinity;
+    for (const seq of sequences) {
+      const result = calculateBankPath(objBall, pocket, seq);
+      if (result.valid) {
+        const score = evaluatePath(result);
+        if (score > bestScore) { bestScore = score; bestResult = result; }
+      }
+    }
+    return bestResult || { valid: false, points: [], aimPoint: null };
+  }
+
+  function generateRailSequences(count) {
+    const rails = ['top', 'bottom', 'left', 'right'];
+    const results = [];
+    function generate(current, remaining) {
+      if (remaining === 0) { results.push([...current]); return; }
+      for (const rail of rails) {
+        if (current.length > 0) {
+          const last = current[current.length - 1];
+          if (last === rail) continue;
+          if ((last === 'top' && rail === 'bottom') || (last === 'bottom' && rail === 'top') ||
+              (last === 'left' && rail === 'right') || (last === 'right' && rail === 'left')) continue;
+        }
+        current.push(rail);
+        generate(current, remaining - 1);
+        current.pop();
+      }
+    }
+    generate([], count);
+    return results;
+  }
+
+  function calculateBankPath(objBall, pocket, railSequence) {
+    const ballR = getBallRadius();
+    let mirroredPocket = { ...pocket };
+    for (let i = railSequence.length - 1; i >= 0; i--) {
+      mirroredPocket = mirrorPoint(mirroredPocket, railSequence[i]);
+    }
+    const hitPoints = [];
+    let currentPoint = { ...objBall };
+    for (let i = 0; i < railSequence.length; i++) {
+      let target = { ...pocket };
+      for (let j = railSequence.length - 1; j > i; j--) {
+        target = mirrorPoint(target, railSequence[j]);
+      }
+      const hit = lineIntersectRail(currentPoint, target, railSequence[i]);
+      if (!hit) return { valid: false, points: [], aimPoint: null };
+      if (!isPointOnRail(hit, railSequence[i], ballR)) return { valid: false, points: [], aimPoint: null };
+      hitPoints.push(hit);
+      currentPoint = hit;
+    }
+    const pathPoints = [objBall, ...hitPoints, pocket];
+    const firstDir = normalize({ x: hitPoints[0].x - objBall.x, y: hitPoints[0].y - objBall.y });
+    const aimPoint = { x: objBall.x + firstDir.x * ballRadius * 2, y: objBall.y + firstDir.y * ballRadius * 2, nx: firstDir.x, ny: firstDir.y };
+    return { valid: true, points: pathPoints, aimPoint: aimPoint, hitPoints: hitPoints };
+  }
+
+  function mirrorPoint(p, rail) {
+    switch (rail) {
+      case 'top': return { x: p.x, y: -p.y };
+      case 'bottom': return { x: p.x, y: 2 - p.y };
+      case 'left': return { x: -p.x, y: p.y };
+      case 'right': return { x: 2 - p.x, y: p.y };
+      default: return { ...p };
+    }
+  }
+
+  function lineIntersectRail(p1, p2, rail) {
+    switch (rail) {
+      case 'top': {
+        if (Math.abs(p2.y - p1.y) < 0.0001) return null;
+        const t = (0 - p1.y) / (p2.y - p1.y);
+        if (t < 0 || t > 1) return null;
+        return { x: p1.x + t * (p2.x - p1.x), y: 0 };
+      }
+      case 'bottom': {
+        if (Math.abs(p2.y - p1.y) < 0.0001) return null;
+        const t = (1 - p1.y) / (p2.y - p1.y);
+        if (t < 0 || t > 1) return null;
+        return { x: p1.x + t * (p2.x - p1.x), y: 1 };
+      }
+      case 'left': {
+        if (Math.abs(p2.x - p1.x) < 0.0001) return null;
+        const t = (0 - p1.x) / (p2.x - p1.x);
+        if (t < 0 || t > 1) return null;
+        return { x: 0, y: p1.y + t * (p2.y - p1.y) };
+      }
+      case 'right': {
+        if (Math.abs(p2.x - p1.x) < 0.0001) return null;
+        const t = (1 - p1.x) / (p2.x - p1.x);
+        if (t < 0 || t > 1) return null;
+        return { x: 1, y: p1.y + t * (p2.y - p1.y) };
+      }
+      default: return null;
+    }
+  }
+
+  function isPointOnRail(p, rail, ballR) {
+    const margin = ballR * 2;
+    switch (rail) {
+      case 'top':
+      case 'bottom': return p.x > margin && p.x < 1 - margin;
+      case 'left':
+      case 'right': return p.y > margin && p.y < 1 - margin;
+      default: return false;
+    }
+  }
+
+  function evaluatePath(result) {
+    if (!result.valid) return -Infinity;
+    let score = 0;
+    const points = result.points;
+    for (let i = 1; i < points.length - 1; i++) {
+      const prev = points[i - 1], curr = points[i], next = points[i + 1];
+      const v1 = normalize({ x: curr.x - prev.x, y: curr.y - prev.y });
+      const v2 = normalize({ x: next.x - curr.x, y: next.y - curr.y });
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      score += Math.abs(dot);
+    }
+    return score;
+  }
+
+  function normalize(v) {
+    const len = Math.sqrt(v.x * v.x + v.y * v.y);
+    if (len < 0.0001) return { x: 0, y: 0 };
+    return { x: v.x / len, y: v.y / len };
+  }
+
+  function getBallRadius() { return 0.018; }
+
+  function getTargetPocket() {
+    if (!state.autoPocket && state.targetPocket !== null) {
+      return state.pockets[state.targetPocket];
+    }
+    let nearest = 0, minDist = Infinity;
+    state.pockets.forEach((p, i) => {
+      const dx = p.x - state.objectBall.x, dy = p.y - state.objectBall.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < minDist) { minDist = dist; nearest = i; }
+    });
+    return state.pockets[nearest];
+  }
+
+  // ========== 绘制 ==========
+  function toScreen(p) {
+    return { x: p.x * W, y: p.y * H };
+  }
+
+  function drawBall(p, color, radius, label) {
+    const s = toScreen(p);
+    const r = radius * Math.min(W, H);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (label) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold ' + Math.round(r * 0.8) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, s.x, s.y);
+    }
+  }
+
+  function drawPocket(p, selected) {
+    const s = toScreen(p);
+    const r = getBallRadius() * Math.min(W, H) * 1.3;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = selected ? 'rgba(239,68,68,0.6)' : 'rgba(255,255,255,0.15)';
+    ctx.fill();
+    ctx.strokeStyle = selected ? '#ef4444' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.round(r * 0.6) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('+', s.x, s.y);
+  }
+
+  function drawLine(p1, p2, color, width, dash) {
+    const s1 = toScreen(p1), s2 = toScreen(p2);
+    ctx.beginPath();
+    ctx.moveTo(s1.x, s1.y);
+    ctx.lineTo(s2.x, s2.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    if (dash) ctx.setLineDash(dash);
+    else ctx.setLineDash([]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawAimPoint(p) {
+    const s = toScreen(p);
+    const r = getBallRadius() * Math.min(W, H) * 1.5;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('瞄准点', s.x, s.y - r - 6);
+  }
+
+  function drawSeparationAngle(cue, obj, aim) {
+    const sc = toScreen(cue), so = toScreen(obj);
+    const dir = normalize({ x: aim.x - cue.x, y: aim.y - cue.y });
+    const sepDir = normalize({ x: obj.x - aim.x, y: obj.y - aim.y });
+    const angle = Math.atan2(sepDir.y, sepDir.x) - Math.atan2(dir.y, dir.x);
+    const midAngle = Math.atan2(dir.y, dir.x) + angle / 2;
+    const arcR = getBallRadius() * Math.min(W, H) * 4;
+    ctx.beginPath();
+    ctx.arc(so.x, so.y, arcR, Math.atan2(dir.y, dir.x), Math.atan2(sepDir.y, sepDir.x), angle < 0);
+    ctx.strokeStyle = 'rgba(0,255,255,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    const labelPos = {
+      x: so.x + Math.cos(midAngle) * (arcR + 20),
+      y: so.y + Math.sin(midAngle) * (arcR + 20)
+    };
+    ctx.fillStyle = '#0ff';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((Math.abs(angle) * 180 / Math.PI).toFixed(1) + '°', labelPos.x, labelPos.y);
+  }
+
+  function drawTable() {
+    ctx.clearRect(0, 0, W, H);
+    const margin = getBallRadius() * 2 * Math.min(W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(margin, margin, W - margin * 2, H - margin * 2);
+  }
+
+  function render() {
+    drawTable();
+    const ballR = getBallRadius() * Math.min(W, H);
+    const targetPocket = getTargetPocket();
+    const result = calculateBankShot(state.objectBall, targetPocket, state.rails);
+
+    // 绘制所有球袋
+    if (state.showAllPockets) {
+      state.pockets.forEach((p, i) => {
+        const isTarget = (p === targetPocket);
+        drawPocket(p, isTarget);
+      });
+    } else {
+      drawPocket(targetPocket, true);
+    }
+
+    // 绘制进球路线
+    if (state.showPocketLine && result.valid) {
+      const points = result.points;
+      for (let i = 0; i < points.length - 1; i++) {
+        drawLine(points[i], points[i + 1], 'rgba(240,192,64,0.6)', 2, i === 0 ? [] : [6, 4]);
+      }
+    }
+
+    // 绘制瞄准点和母球路线
+    if (result.valid && result.aimPoint) {
+      if (state.showAimPoint) {
+        drawAimPoint(result.aimPoint);
+      }
+      drawLine(state.cueBall, result.aimPoint, 'rgba(255,255,255,0.4)', 1.5, [4, 4]);
+      if (state.showExtendLine) {
+        const extendLen = 0.3;
+        const dir = normalize({ x: result.aimPoint.x - state.cueBall.x, y: result.aimPoint.y - state.cueBall.y });
+        const extendEnd = { x: result.aimPoint.x + dir.x * extendLen, y: result.aimPoint.y + dir.y * extendLen };
+        drawLine(result.aimPoint, extendEnd, 'rgba(255,255,255,0.15)', 1, [2, 6]);
+      }
+      if (state.showSepAngle) {
+        drawSeparationAngle(state.cueBall, state.objectBall, result.aimPoint);
+      }
+    }
+
+    // 绘制球
+    drawBall(state.objectBall, '#f0c040', getBallRadius(), '');
+    drawBall(state.cueBall, '#fff', getBallRadius(), '');
+  }
+
+  // ========== 交互 ==========
+  function getPointerPos(e) {
+    const touch = e.touches ? e.touches[0] : e;
+    return { x: touch.clientX / W, y: touch.clientY / H };
+  }
+
+  function dist(p1, p2) {
+    const dx = p1.x - p2.x, dy = p1.y - p2.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function findTarget(p) {
+    const threshold = getBallRadius() * 3;
+    if (dist(p, state.cueBall) < threshold) return { type: 'cueBall' };
+    if (dist(p, state.objectBall) < threshold) return { type: 'objectBall' };
+    for (let i = 0; i < state.pockets.length; i++) {
+      if (dist(p, state.pockets[i]) < threshold * 1.5) return { type: 'pocket', idx: i };
+    }
+    return null;
+  }
+
+  let lastTapTime = 0;
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+      // 双击：切换面板
+      togglePanel();
+      lastTapTime = 0;
+      return;
+    }
+    lastTapTime = now;
+
+    const p = getPointerPos(e);
+    const target = findTarget(p);
+    if (target) {
+      state.dragging = target;
+      state.dragOffsetX = 0;
+      state.dragOffsetY = 0;
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    e.preventDefault();
+    if (!state.dragging) return;
+    const p = getPointerPos(e);
+    const margin = getBallRadius() * 2;
+    const clamped = { x: Math.max(margin, Math.min(1 - margin, p.x)), y: Math.max(margin, Math.min(1 - margin, p.y)) };
+
+    if (state.dragging.type === 'cueBall') {
+      state.cueBall = clamped;
+    } else if (state.dragging.type === 'objectBall') {
+      state.objectBall = clamped;
+    } else if (state.dragging.type === 'pocket') {
+      state.pockets[state.dragging.idx] = clamped;
+      state.autoPocket = false;
+      state.targetPocket = state.dragging.idx;
+      updatePocketUI();
+    }
+    render();
+  });
+
+  canvas.addEventListener('pointerup', () => { state.dragging = null; });
+  canvas.addEventListener('pointercancel', () => { state.dragging = null; });
+
+  // ========== UI 控制 ==========
+  function togglePanel() {
+    const panel = document.getElementById('panel');
+    state.panelCollapsed = !state.panelCollapsed;
+    panel.classList.toggle('collapsed', state.panelCollapsed);
+  }
+
+  function updatePocketUI() {
+    const btns = document.querySelectorAll('.pocket-btn');
+    btns.forEach((btn, i) => {
+      btn.classList.remove('auto', 'selected');
+      if (state.autoPocket) {
+        btn.classList.add('auto');
+      } else if (state.targetPocket === i) {
+        btn.classList.add('selected');
+      }
+    });
+  }
+
+  // 反弹库数
+  document.getElementById('railRow').addEventListener('click', (e) => {
+    const btn = e.target.closest('.rail-btn');
+    if (!btn) return;
+    document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.rails = parseInt(btn.dataset.rails);
+    render();
+  });
+
+  // 透明度
+  const opacitySlider = document.getElementById('opacitySlider');
+  const opacityVal = document.getElementById('opacityVal');
+  opacitySlider.addEventListener('input', (e) => {
+    const val = e.target.value;
+    state.opacity = val;
+    opacityVal.textContent = val + '%';
+    // 通知 Android 层调整透明度
+    if (window.AndroidBridge && window.AndroidBridge.setOpacity) {
+      window.AndroidBridge.setOpacity(val / 100);
+    }
+  });
+
+  // 设置面板
+  document.getElementById('btnSettings').addEventListener('click', () => {
+    const panel = document.getElementById('advancedPanel');
+    state.advancedOpen = !state.advancedOpen;
+    panel.classList.toggle('open', state.advancedOpen);
+  });
+
+  // 重置
+  document.getElementById('btnReset').addEventListener('click', () => {
+    state.cueBall = { x: 0.25, y: 0.5 };
+    state.objectBall = { x: 0.55, y: 0.5 };
+    state.pockets = [
+      { x: 0.04, y: 0.06 }, { x: 0.50, y: 0.03 }, { x: 0.96, y: 0.06 },
+      { x: 0.04, y: 0.94 }, { x: 0.50, y: 0.97 }, { x: 0.96, y: 0.94 },
+    ];
+    state.autoPocket = true;
+    state.targetPocket = null;
+    updatePocketUI();
+    render();
+  });
+
+  // 帮助
+  document.getElementById('btnHelp').addEventListener('click', () => {
+    document.getElementById('helpOverlay').classList.remove('hidden');
+  });
+  document.getElementById('helpBtn').addEventListener('click', () => {
+    document.getElementById('helpOverlay').classList.add('hidden');
+  });
+
+  // 面板折叠
+  document.getElementById('panelHandle').addEventListener('click', togglePanel);
+
+  // 开关
+  document.getElementById('toggleAim').addEventListener('change', (e) => { state.showAimPoint = e.target.checked; render(); });
+  document.getElementById('togglePocket').addEventListener('change', (e) => { state.showPocketLine = e.target.checked; render(); });
+  document.getElementById('toggleExtend').addEventListener('change', (e) => { state.showExtendLine = e.target.checked; render(); });
+  document.getElementById('toggleSep').addEventListener('change', (e) => { state.showSepAngle = e.target.checked; render(); });
+  document.getElementById('toggleAllPockets').addEventListener('change', (e) => { state.showAllPockets = e.target.checked; render(); });
+
+  // 球袋选择
+  document.getElementById('pocketBtns').addEventListener('click', (e) => {
+    const btn = e.target.closest('.pocket-btn');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.idx);
+    if (state.autoPocket || state.targetPocket !== idx) {
+      state.autoPocket = false;
+      state.targetPocket = idx;
+    } else {
+      state.autoPocket = true;
+      state.targetPocket = null;
+    }
+    updatePocketUI();
+    render();
+  });
+
+  // 初始化
+  window.addEventListener('resize', () => { resize(); render(); });
+  resize();
+  updatePocketUI();
+  render();
+
+  // 帮助遮罩默认显示（首次使用）
+  const hasSeenHelp = localStorage.getItem('hasSeenHelp');
+  if (!hasSeenHelp) {
+    document.getElementById('helpOverlay').classList.remove('hidden');
+    localStorage.setItem('hasSeenHelp', 'true');
+  }
+})();
+</script>
+</body>
+</html>
