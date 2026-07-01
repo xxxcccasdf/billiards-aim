@@ -1,5 +1,6 @@
 <resources>
-    <style name="Theme.BilliardsAim" parent="android:Theme.Light.NoActionBar">
+    <style name="Theme.BilliardsAim" parent="android:style/Theme.Light">
+        <item name="android:windowNoTitle">true</item>
         <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>
