@@ -5,83 +5,30 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="24dp"
-    android:background="@drawable/main_bg">
+    android:background="#1a1a2e">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="🎱 台球瞄准辅助"
+        android:text="台球瞄准辅助"
         android:textSize="28sp"
         android:textStyle="bold"
         android:textColor="#f0c040"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="悬浮窗台球路线辅助工具"
-        android:textSize="14sp"
-        android:textColor="#888888"
         android:layout_marginBottom="32dp" />
 
-    <LinearLayout
+    <Button
+        android:id="@+id/btn_start_float"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp"
-        android:background="@drawable/control_bar_bg"
-        android:layout_marginBottom="24dp">
+        android:layout_height="56dp"
+        android:text="启动悬浮窗"
+        android:textSize="16sp"
+        android:layout_marginBottom="12dp" />
 
-        <TextView
-            android:id="@+id/tv_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="正在检查权限..."
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:id="@+id/tv_tip"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="请授予悬浮窗权限..."
-            android:textSize="13sp"
-            android:textColor="#888888"
-            android:layout_gravity="center_horizontal"
-            android:gravity="center"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btn_start_float"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="启动悬浮窗"
-            android:textSize="16sp"
-            android:textColor="#111111"
-            android:backgroundTint="#f0c040"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/btn_stop_float"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="关闭悬浮窗"
-            android:textSize="16sp"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#333344"
-            android:enabled="false" />
-    </LinearLayout>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="使用说明：\n1. 授予悬浮窗权限\n2. 打开台球游戏\n3. 点击启动悬浮窗\n4. 拖动调整位置"
-        android:textSize="12sp"
-        android:textColor="#666666"
-        android:lineSpacingMultiplier="1.4"
-        android:gravity="center" />
+    <Button
+        android:id="@+id/btn_stop_float"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:text="关闭悬浮窗"
+        android:textSize="16sp" />
 
 </LinearLayout>

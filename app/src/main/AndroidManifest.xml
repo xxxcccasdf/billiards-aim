@@ -1,26 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-   >
+    package="com.billiards.aim">
 
-    <!-- 悬浮窗权限 -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- 前台服务权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- Android 14+ 前台服务类型权限 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <!-- Android 13+ 通知权限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- 开机自启 -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Android 12+ 精确闹钟权限 -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- 使用闹钟权限 -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <!-- 保持唤醒 -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- 网络状态（用于WebView） -->
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -29,14 +18,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.BilliardsAim"
-        android:usesCleartextTraffic="false"
-        tools:targetApi="35">
+        android:usesCleartextTraffic="true">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.BilliardsAim.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -44,36 +30,35 @@
             </intent-filter>
         </activity>
 
-        <!-- 前台服务：Android 14+ 必须指定 foregroundServiceType -->
         <service
             android:name=".FloatingWindowService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="specialUse"
-            android:stopWithTask="false"
-            tools:targetApi="34">
+            android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="floating_window_overlay" />
+                android:value="floating_window" />
         </service>
 
-        <!-- 进程守护广播接收器 -->
+        <service
+            android:name=".KeepAliveJobService"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service
+            android:name=".ServiceRestarter"
+            android:enabled="true"
+            android:exported="false" />
+
         <receiver
             android:name=".ServiceRestarter"
             android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="ACTION_RESTART_SERVICE" />
             </intent-filter>
         </receiver>
-
-        <!-- JobService 用于 Android 14+ 进程守护 -->
-        <service
-            android:name=".KeepAliveJobService"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
 
