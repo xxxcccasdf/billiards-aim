@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace 'com.billiards.aim'
-    compileSdk 35
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.billiards.aim"
         minSdk 24
-        targetSdk 35
+        targetSdk 34
         versionCode 1
         versionName "1.0.0"
 
